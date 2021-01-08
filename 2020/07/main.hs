@@ -2,19 +2,6 @@
 import Data.Function
 import qualified Data.Set as Set
 
-main :: IO ()
-main = do
-  cts <- readFile "input.dat"
-  putStrLn $ "part 1: " ++ (show $ part1 cts)
-  putStrLn $ "part 2: " ++ (show $ part2 cts)
-
-part1 :: String -> Int
-part1 cts = let s = loadSpecification cts
-  in length $ ancestors s "shiny gold"
-
-part2 :: String -> Int
-part2 cts = undefined
-
 data Edge k a = E k a
   deriving (Show, Eq, Ord)
 data Node k a = N k (Set.Set (Edge k a))
@@ -59,4 +46,42 @@ fixEq :: (Eq a) => (a -> a) -> a -> a
 fixEq f x = let y = f x in
   if x == y then x else fixEq f y
 
+getNode :: (Ord k) => Graph k a -> k -> Node k a
+getNode g k = Set.findMin $ Set.filter (\(N k' _) -> k == k') g
+
+children :: (Ord k, Ord a) => Graph k a -> k -> Graph k a
+children g k = let
+  N _ es = getNode g k
+  in Set.map (\(E k' _) -> getNode g k') es
+
+accumulateEdges :: (Ord k, Ord a, Num a) => Graph k a -> k -> a
+accumulateEdges g k = (h $ getNode g k)
+  where 
+    h (N k' es) =
+      if es == Set.empty then 1
+      else 1 + (sum $ Set.map h' es)
+    h' (E k' x) = x * (accumulateEdges g k')
+
+main :: IO ()
+main = mainRutine "input.dat"
+
+mainRutine :: String -> IO ()
+mainRutine filename = do
+  cts <- readFile filename
+  putStrLn $ "part 1: " ++ (show $ part1 cts)
+  let s = loadSpecification cts
+      n = getNode s "shiny gold"
+      cs = children s "shiny gold"
+  -- mapM_ print $ s
+  -- print $ n
+  -- print $ Set.take 5 cs
+  putStrLn $ "part 2: " ++ (show $ part2 cts)
+
+part1 :: String -> Int
+part1 cts = let s = loadSpecification cts
+  in Set.size $ ancestors s "shiny gold"
+
+part2 :: String -> Int
+part2 cts = let s = loadSpecification cts
+  in (accumulateEdges s "shiny gold") - 1
 
